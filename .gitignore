@@ -5,3 +5,15 @@
 //  Created by Shrivatsa Kulkarni on 06/06/26.
 //
 
+# Xcode build artifacts
+.derivedData/
+DerivedData/
+build/
+Build/
+*.xcresult
+
+# Swift Package Manager build artifacts
+.build/
+
+# User-specific Xcode state
+*.xcuserstate

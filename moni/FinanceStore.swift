@@ -10,6 +10,7 @@ import SwiftData
 
 enum FinanceStore {
     private static let pendingBackTapExpenseAmountKey = "pendingBackTapExpenseAmountPaise"
+    static let shortcutCategoryNames = ["Food", "Groceries", "Transport", "Shopping", "Bills"]
 
     static let schema = Schema([
         Account.self,
@@ -38,5 +39,65 @@ enum FinanceStore {
 
         UserDefaults.standard.removeObject(forKey: pendingBackTapExpenseAmountKey)
         return amountPaise
+    }
+
+    @MainActor
+    static func addShortcutExpense(amountPaise: Int, categoryName: String) throws {
+        let context = sharedModelContainer.mainContext
+        let accountDescriptor = FetchDescriptor<Account>(
+            predicate: #Predicate { account in
+                account.isArchived == false
+            },
+            sortBy: [SortDescriptor(\.createdAt)]
+        )
+
+        guard let account = try context.fetch(accountDescriptor).first else {
+            throw ShortcutExpenseError.noActiveAccount
+        }
+
+        let category = try category(named: categoryName, in: context)
+
+        context.insert(
+            MoneyTransaction(
+                amountPaise: amountPaise,
+                date: .now,
+                type: .expense,
+                account: account,
+                category: category,
+                payee: category.name,
+                note: "Added from Back Tap"
+            )
+        )
+
+        try context.save()
+    }
+
+    @MainActor
+    private static func category(named categoryName: String, in context: ModelContext) throws -> SpendingCategory {
+        let descriptor = FetchDescriptor<SpendingCategory>(
+            predicate: #Predicate { category in
+                category.name == categoryName
+            },
+            sortBy: [SortDescriptor(\.createdAt)]
+        )
+
+        if let category = try context.fetch(descriptor).first {
+            return category
+        }
+
+        let category = SpendingCategory(name: categoryName, isDefault: true)
+        context.insert(category)
+        return category
+    }
+}
+
+enum ShortcutExpenseError: LocalizedError {
+    case noActiveAccount
+
+    var errorDescription: String? {
+        switch self {
+        case .noActiveAccount:
+            "Create an account in moni before using Back Tap."
+        }
     }
 }

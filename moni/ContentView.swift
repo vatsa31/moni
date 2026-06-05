@@ -29,8 +29,11 @@ struct ContentView: View {
     @State private var quickPickerAmountPaise: Int?
     @State private var categoryDragOffset: CGSize = .zero
     @State private var highlightedQuickCategoryID: PersistentIdentifier?
+    @State private var lastQuickDragHapticTime: TimeInterval = 0
+    @State private var lastCategoryDragHapticTime: TimeInterval = 0
 
     private let quickExpenseLadder = [10, 20, 50, 100, 200, 500, 1_000, 1_500, 2_000, 3_000, 4_000, 5_000]
+    private let dragHapticInterval: TimeInterval = 0.08
 
     private var appTheme: AppTheme {
         AppTheme(rawValue: appThemeRawValue) ?? .system
@@ -190,15 +193,16 @@ struct ContentView: View {
                         quickDragHeight = min(upwardDrag, dragLimit)
                         let nextAmountPaise = quickAmount(for: quickDragHeight, dragLimit: dragLimit)
                         if nextAmountPaise != quickAmountPaise {
-                            triggerSelectionHaptic()
+                            triggerSelectionHaptic(strength: .strong)
                         }
+                        triggerQuickDragHapticIfNeeded()
                         quickAmountPaise = nextAmountPaise
                     }
                     .onEnded { value in
                         let upwardDrag = max(-value.translation.height, 0)
 
                         if upwardDrag > 24, !quickExpenseCategories.isEmpty {
-                            triggerImpactHaptic()
+                            triggerImpactHaptic(strength: .heavy)
                             quickPickerAmountPaise = quickAmount(for: min(upwardDrag, quickDragLimit), dragLimit: quickDragLimit)
                             categoryDragOffset = .zero
                             highlightedQuickCategoryID = nil
@@ -240,14 +244,15 @@ struct ContentView: View {
                         maximumDistance: 86
                     )
                     if nextCategoryID != highlightedQuickCategoryID {
-                        triggerSelectionHaptic()
+                        triggerSelectionHaptic(strength: .strong)
                     }
+                    triggerCategoryDragHapticIfNeeded()
                     highlightedQuickCategoryID = nextCategoryID
                 },
                 onDrop: { dragLocation, categoryCenters in
                     if let categoryID = closestCategoryID(to: dragLocation, in: categoryCenters, maximumDistance: 96),
                        let category = categories.first(where: { $0.persistentModelID == categoryID }) {
-                        triggerImpactHaptic()
+                        triggerImpactHaptic(strength: .heavy)
                         saveQuickExpense(amountPaise: amountPaise, category: category)
                     }
 
@@ -516,16 +521,33 @@ struct ContentView: View {
         return quickExpenseLadder[index] * 100
     }
 
-    private func triggerSelectionHaptic() {
+    private func triggerSelectionHaptic(strength: HapticStrength = .medium) {
         #if canImport(UIKit)
         UISelectionFeedbackGenerator().selectionChanged()
+        UIImpactFeedbackGenerator(style: strength.impactStyle).impactOccurred(intensity: strength.intensity)
         #endif
     }
 
-    private func triggerImpactHaptic() {
+    private func triggerImpactHaptic(strength: HapticStrength = .medium) {
         #if canImport(UIKit)
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        UIImpactFeedbackGenerator(style: strength.impactStyle).impactOccurred(intensity: strength.intensity)
         #endif
+    }
+
+    private func triggerQuickDragHapticIfNeeded() {
+        let now = Date().timeIntervalSinceReferenceDate
+        guard now - lastQuickDragHapticTime >= dragHapticInterval else { return }
+
+        lastQuickDragHapticTime = now
+        triggerImpactHaptic(strength: .medium)
+    }
+
+    private func triggerCategoryDragHapticIfNeeded() {
+        let now = Date().timeIntervalSinceReferenceDate
+        guard now - lastCategoryDragHapticTime >= dragHapticInterval else { return }
+
+        lastCategoryDragHapticTime = now
+        triggerImpactHaptic(strength: .medium)
     }
 
     private func closestCategoryID(
@@ -676,6 +698,36 @@ private enum AppTab {
             "History"
         }
     }
+}
+
+private enum HapticStrength {
+    case medium
+    case strong
+    case heavy
+
+    #if canImport(UIKit)
+    var impactStyle: UIImpactFeedbackGenerator.FeedbackStyle {
+        switch self {
+        case .medium:
+            .medium
+        case .strong:
+            .rigid
+        case .heavy:
+            .heavy
+        }
+    }
+
+    var intensity: CGFloat {
+        switch self {
+        case .medium:
+            0.72
+        case .strong:
+            0.9
+        case .heavy:
+            1
+        }
+    }
+    #endif
 }
 
 private enum AppTheme: String, CaseIterable, Identifiable {

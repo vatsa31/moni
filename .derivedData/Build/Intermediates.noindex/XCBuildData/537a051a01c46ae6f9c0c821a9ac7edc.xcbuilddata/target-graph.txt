@@ -1,2 +1,0 @@
-Target dependency graph (1 target)
-Target 'moni' in project 'moni' (no dependencies)
