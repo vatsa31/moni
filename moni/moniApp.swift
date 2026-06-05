@@ -12,7 +12,10 @@ import SwiftData
 struct moniApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            Item.self,
+            Account.self,
+            SpendingCategory.self,
+            MoneyTransaction.self,
+            MonthlyBudget.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
