@@ -13,6 +13,7 @@ import UIKit
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
 
     @Query(sort: \Account.createdAt) private var accounts: [Account]
     @Query(sort: \SpendingCategory.name) private var categories: [SpendingCategory]
@@ -72,6 +73,20 @@ struct ContentView: View {
         .animation(.easeOut(duration: 0.18), value: isChoosingQuickAmount)
         .overlay {
             quickExpenseOverlay
+        }
+        .onAppear {
+            presentPendingBackTapExpenseIfNeeded()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                presentPendingBackTapExpenseIfNeeded()
+            }
+        }
+        .onChange(of: activeAccounts.count) { _, _ in
+            presentPendingBackTapExpenseIfNeeded()
+        }
+        .onChange(of: quickExpenseCategories.count) { _, _ in
+            presentPendingBackTapExpenseIfNeeded()
         }
         .sheet(item: $activeSheet) { sheet in
             switch sheet {
@@ -542,6 +557,20 @@ struct ContentView: View {
         )
 
         selectedTab = .home
+    }
+
+    private func presentPendingBackTapExpenseIfNeeded() {
+        guard quickPickerAmountPaise == nil, !activeAccounts.isEmpty, !quickExpenseCategories.isEmpty else { return }
+        guard let amountPaise = FinanceStore.consumePendingBackTapExpensePaise() else { return }
+
+        selectedTab = .home
+        quickAmountPaise = amountPaise
+        categoryDragOffset = .zero
+        highlightedQuickCategoryID = nil
+
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
+            quickPickerAmountPaise = amountPaise
+        }
     }
 
     private func totalBudget(for monthStart: Date) -> MonthlyBudget? {
