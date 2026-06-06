@@ -17,3 +17,5 @@ Build/
 
 # User-specific Xcode state
 *.xcuserstate
+xcuserdata/
+*.xcuserdatad/

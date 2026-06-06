@@ -6,10 +6,6 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXBuildFile section */
-		B7908DBB2FD35EC4008B45BA /* .gitignore in Resources */ = {isa = PBXBuildFile; fileRef = B7908DBA2FD35EC0008B45BA /* .gitignore */; };
-/* End PBXBuildFile section */
-
 /* Begin PBXContainerItemProxy section */
 		B7EAC6C32FD1F45400F957DB /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -28,7 +24,6 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		B7908DBA2FD35EC0008B45BA /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
 		B7EAC6B32FD1F45300F957DB /* moni.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = moni.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B7EAC6C22FD1F45400F957DB /* moniTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = moniTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B7EAC6CC2FD1F45400F957DB /* moniUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = moniUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -80,7 +75,6 @@
 		B7EAC6AA2FD1F45300F957DB = {
 			isa = PBXGroup;
 			children = (
-				B7908DBA2FD35EC0008B45BA /* .gitignore */,
 				B7EAC6B52FD1F45300F957DB /* moni */,
 				B7EAC6C52FD1F45400F957DB /* moniTests */,
 				B7EAC6CF2FD1F45400F957DB /* moniUITests */,
@@ -218,7 +212,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B7908DBB2FD35EC4008B45BA /* .gitignore in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
