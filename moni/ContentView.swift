@@ -14,6 +14,7 @@ import UIKit
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
+    @Namespace private var tabSelectionNamespace
 
     @Query(sort: \Account.createdAt) private var accounts: [Account]
     @Query(sort: \SpendingCategory.name) private var categories: [SpendingCategory]
@@ -31,6 +32,7 @@ struct ContentView: View {
     @State private var highlightedQuickCategoryID: PersistentIdentifier?
     @State private var lastQuickDragHapticTime: TimeInterval = 0
     @State private var lastCategoryDragHapticTime: TimeInterval = 0
+    @State private var dashboardAppeared = false
 
     private let quickExpenseLadder = [10, 20, 50, 100, 200, 500, 1_000, 1_500, 2_000, 3_000, 4_000, 5_000]
     private let dragHapticInterval: TimeInterval = 0.08
@@ -50,21 +52,7 @@ struct ContentView: View {
             } else {
                 NavigationStack {
                     currentContent
-                        .navigationTitle(selectedTab.title)
-                        .navigationBarTitleDisplayMode(.inline)
-                        .toolbar {
-                            ToolbarItem(placement: .topBarLeading) {
-                                themeMenu
-                            }
-
-                            ToolbarItem(placement: .topBarTrailing) {
-                                Button {
-                                    activeSheet = .budget
-                                } label: {
-                                    Label("Budget", systemImage: "gauge.with.dots.needle.33percent")
-                                }
-                            }
-                        }
+                        .toolbar(.hidden, for: .navigationBar)
                         .safeAreaInset(edge: .bottom) {
                             bottomActionBar
                         }
@@ -136,51 +124,81 @@ struct ContentView: View {
     }
 
     private var bottomActionBar: some View {
-        HStack {
-            Button {
-                selectedTab = .home
-            } label: {
-                VStack(spacing: 4) {
-                    Image(systemName: selectedTab == .home ? "house.fill" : "house")
-                        .font(.title3)
-                    Text("Home")
-                        .font(.caption2)
-                }
-                .frame(maxWidth: .infinity)
-                .foregroundStyle(selectedTab == .home ? .primary : .secondary)
-            }
-            .buttonStyle(.plain)
+        HStack(spacing: 10) {
+            tabBarButton(.home)
 
             quickExpenseButton
 
-            Button {
-                selectedTab = .history
-            } label: {
-                VStack(spacing: 4) {
-                    Image(systemName: selectedTab == .history ? "clock.fill" : "clock")
-                        .font(.title3)
-                    Text("History")
-                        .font(.caption2)
-                }
-                .frame(maxWidth: .infinity)
-                .foregroundStyle(selectedTab == .history ? .primary : .secondary)
-            }
-            .buttonStyle(.plain)
+            tabBarButton(.history)
         }
-        .padding(.horizontal)
-        .padding(.top, 8)
-        .padding(.bottom, 6)
-        .background(.regularMaterial)
+        .padding(8)
+        .background {
+            RoundedRectangle(cornerRadius: 30, style: .continuous)
+                .fill(Color.moniSurface.opacity(0.96))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 30, style: .continuous)
+                        .stroke(Color.moniInk.opacity(0.06), lineWidth: 1)
+                }
+                .shadow(color: Color.moniInk.opacity(0.10), radius: 24, y: 12)
+        }
+        .padding(.horizontal, 18)
+        .padding(.bottom, 4)
+    }
+
+    private func tabBarButton(_ tab: AppTab) -> some View {
+        Button {
+            withAnimation(Motion.snappy) {
+                selectedTab = tab
+            }
+            triggerSelectionHaptic(strength: .medium)
+        } label: {
+            ZStack {
+                if selectedTab == tab {
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .fill(Color.moniLeaf.opacity(0.14))
+                        .matchedGeometryEffect(id: "selectedTab", in: tabSelectionNamespace)
+                }
+
+                VStack(spacing: 4) {
+                    Image(systemName: selectedTab == tab ? tab.filledIconName : tab.iconName)
+                        .font(.title3.weight(.medium))
+                        .symbolEffect(.bounce, value: selectedTab == tab)
+
+                    Text(tab.label)
+                        .font(.caption2.weight(.medium))
+                }
+                .foregroundStyle(selectedTab == tab ? Color.moniInk : Color.moniMuted)
+                .frame(maxWidth: .infinity)
+            }
+            .frame(height: 56)
+            .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        }
+        .buttonStyle(MicroPressButtonStyle())
     }
 
     private var quickExpenseButton: some View {
         Image(systemName: "plus")
-            .font(.title2.weight(.bold))
-            .foregroundStyle(.background)
-            .frame(width: 58, height: 58)
-            .background(.primary, in: Circle())
-            .shadow(color: .black.opacity(0.18), radius: 10, y: 4)
-            .scaleEffect(isChoosingQuickAmount ? 1.08 : 1)
+            .font(.title2.weight(.medium))
+            .foregroundStyle(Color.moniSurface)
+            .frame(width: 62, height: 62)
+            .background {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.moniInk, Color.moniLeaf],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .overlay {
+                        Circle()
+                            .stroke(Color.white.opacity(0.36), lineWidth: 1)
+                    }
+            }
+            .shadow(color: Color.moniLeaf.opacity(isChoosingQuickAmount ? 0.34 : 0.22), radius: isChoosingQuickAmount ? 24 : 14, y: isChoosingQuickAmount ? 12 : 7)
+            .scaleEffect(isChoosingQuickAmount ? 1.12 : 1)
+            .rotationEffect(.degrees(isChoosingQuickAmount ? 135 : 0))
+            .offset(y: isChoosingQuickAmount ? -6 : 0)
             .accessibilityLabel("Add expense")
             .gesture(
                 DragGesture(minimumDistance: 0, coordinateSpace: .global)
@@ -214,7 +232,7 @@ struct ContentView: View {
                         quickDragHeight = 0
                     }
             )
-            .animation(.spring(response: 0.28, dampingFraction: 0.82), value: isChoosingQuickAmount)
+            .animation(Motion.bouncy, value: isChoosingQuickAmount)
     }
 
     private var backgroundBlurRadius: CGFloat {
@@ -283,21 +301,21 @@ struct ContentView: View {
 
                 VStack(spacing: 16) {
                     Text(MoneyFormatting.display(quickAmountPaise))
-                        .font(.system(size: 42, weight: .bold, design: .rounded))
-                        .foregroundStyle(.primary)
+                        .font(.system(size: 46, weight: .semibold))
+                        .foregroundStyle(Color.moniInk)
                         .contentTransition(.numericText())
 
                     VStack(spacing: 8) {
                         ForEach(quickExpenseLadder.reversed(), id: \.self) { amount in
                             HStack(spacing: 8) {
                                 Capsule()
-                                    .fill(amount * 100 <= quickAmountPaise ? Color.primary : Color.secondary.opacity(0.24))
+                                    .fill(amount * 100 <= quickAmountPaise ? Color.moniLeaf : Color.moniMuted.opacity(0.24))
                                     .frame(width: amount == selectedQuickAmountRupees ? 34 : 16, height: 5)
 
                                 if amount == selectedQuickAmountRupees {
                                     Text(MoneyFormatting.display(amount * 100))
-                                        .font(.caption.weight(.semibold))
-                                        .foregroundStyle(.secondary)
+                                        .font(.caption.weight(.medium))
+                                        .foregroundStyle(Color.moniMuted)
                                         .transition(.opacity.combined(with: .move(edge: .leading)))
                                 }
                             }
@@ -307,7 +325,7 @@ struct ContentView: View {
                 }
                 .padding(.horizontal, 22)
                 .padding(.vertical, 18)
-                .shadow(color: .black.opacity(0.18), radius: 18, y: 8)
+                .shadow(color: Color.moniInk.opacity(0.12), radius: 18, y: 8)
                 .padding(.bottom, 84 + quickDragHeight * 0.58)
             }
         }
@@ -328,143 +346,181 @@ struct ContentView: View {
             budgetPaise: totalBudget?.totalBudgetPaise ?? 0
         )
 
-        return List {
-            Section {
+        return ZStack {
+            AppBackdrop()
+
+            ScrollView {
                 VStack(spacing: 18) {
-                    HStack(alignment: .top) {
-                        Spacer(minLength: 44)
-                        VStack(spacing: 6) {
-                            Text("This month")
-                                .font(.subheadline.weight(.medium))
-                                .foregroundStyle(.secondary)
-                            Text(MoneyFormatting.display(monthlySpent))
-                                .font(.largeTitle.bold())
-                                .foregroundStyle(.primary)
-                                .contentTransition(.numericText())
-                                .multilineTextAlignment(.center)
-                            Text("spent")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        .frame(maxWidth: .infinity)
+                    topControlStrip(title: "Today", subtitle: "Manual money flow")
 
-                        Button {
+                    BudgetHeroCard(
+                        monthlySpentPaise: monthlySpent,
+                        totalBudgetPaise: totalBudget?.totalBudgetPaise,
+                        budgetProgress: budgetProgress,
+                        budgetState: budgetState,
+                        isVisible: dashboardAppeared
+                    ) {
+                        withAnimation(Motion.snappy) {
                             activeSheet = .budget
-                        } label: {
-                            Image(systemName: "slider.horizontal.3")
                         }
-                        .buttonStyle(.bordered)
-                        .accessibilityLabel("Edit budget")
                     }
-
-                    if let totalBudget {
-                        ProgressView(
-                            value: budgetProgress
-                        )
-                        .tint(color(for: budgetState))
-
-                        HStack {
-                            Text("\(MoneyFormatting.display(max(totalBudget.totalBudgetPaise - monthlySpent, 0))) left")
-                            Spacer()
-                            Text("Budget \(MoneyFormatting.display(totalBudget.totalBudgetPaise))")
+                    .onAppear {
+                        withAnimation(Motion.entrance.delay(0.04)) {
+                            dashboardAppeared = true
                         }
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                    } else {
-                        Text("Set a monthly budget to grade spending.")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
                     }
-                }
-                .padding(20)
-                .background(
-                    LinearGradient(
-                        colors: ambientColors(progress: budgetProgress, state: budgetState),
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    in: RoundedRectangle(cornerRadius: 18, style: .continuous)
-                )
-                .overlay {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(.white.opacity(0.22), lineWidth: 1)
-                }
-                .shadow(color: ambientShadowColor(for: budgetState), radius: 18, y: 8)
-                .padding(.vertical, 8)
-            }
-            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-            .listRowBackground(Color.clear)
-
-            Section("Accounts") {
-                ForEach(activeAccounts) { account in
-                    Button {
-                        activeSheet = .account(account)
-                    } label: {
-                        AccountRowView(
-                            account: account,
-                            balancePaise: FinanceCalculator.balance(for: account, transactions: transactions)
-                        )
+                    .onDisappear {
+                        dashboardAppeared = false
                     }
-                    .buttonStyle(.plain)
-                }
 
-                Button {
-                    activeSheet = .account(nil)
-                } label: {
-                    Label("Add account", systemImage: "plus.circle")
-                }
-            }
+                    SectionPanel(title: "Accounts", iconName: "wallet.pass") {
+                        VStack(spacing: 10) {
+                            ForEach(Array(activeAccounts.enumerated()), id: \.offset) { index, account in
+                                Button {
+                                    withAnimation(Motion.snappy) {
+                                        activeSheet = .account(account)
+                                    }
+                                } label: {
+                                    AccountRowView(
+                                        account: account,
+                                        balancePaise: FinanceCalculator.balance(for: account, transactions: transactions)
+                                    )
+                                    .motionRow(index: index, isVisible: dashboardAppeared)
+                                }
+                                .buttonStyle(MicroPressButtonStyle())
+                            }
 
-            Section("Recent transactions") {
-                let recentTransactions = transactions.prefix(8)
-
-                if recentTransactions.isEmpty {
-                    ContentUnavailableView(
-                        "No transactions yet",
-                        systemImage: "tray",
-                        description: Text("Add an expense or income to start tracking.")
-                    )
-                } else {
-                    ForEach(Array(recentTransactions)) { transaction in
-                        Button {
-                            activeSheet = .transaction(type: transaction.type, transaction: transaction)
-                        } label: {
-                            TransactionRowView(transaction: transaction)
+                            Button {
+                                withAnimation(Motion.snappy) {
+                                    activeSheet = .account(nil)
+                                }
+                            } label: {
+                                Label("Add account", systemImage: "plus.circle")
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundStyle(Color.moniLeaf)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.top, 4)
+                            }
+                            .buttonStyle(MicroPressButtonStyle())
                         }
-                        .buttonStyle(.plain)
                     }
-                    .onDelete(perform: deleteTransactions)
-                }
-            }
 
-            Section("Category budgets") {
-                let categoryBudgets = budgetsForMonth(monthStart).filter { $0.category != nil }
+                    SectionPanel(title: "Recent transactions", iconName: "sparkles") {
+                        let recentTransactions = transactions.prefix(8)
 
-                if categoryBudgets.isEmpty {
-                    Text("No category budgets set.")
-                        .foregroundStyle(.secondary)
-                } else {
-                    ForEach(categoryBudgets) { budget in
-                        if let category = budget.category {
-                            CategoryBudgetRowView(
-                                category: category,
-                                budgetPaise: budget.totalBudgetPaise,
-                                spentPaise: FinanceCalculator.monthlyExpenses(
-                                    in: transactions,
-                                    category: category,
-                                    month: monthStart
-                                )
+                        if recentTransactions.isEmpty {
+                            EmptyStatePanel(
+                                title: "No movement yet",
+                                subtitle: "Tap the center plus to create the first expense.",
+                                iconName: "tray"
                             )
+                        } else {
+                            VStack(spacing: 10) {
+                                ForEach(Array(recentTransactions.enumerated()), id: \.offset) { index, transaction in
+                                    Button {
+                                        withAnimation(Motion.snappy) {
+                                            activeSheet = .transaction(type: transaction.type, transaction: transaction)
+                                        }
+                                    } label: {
+                                        TransactionRowView(transaction: transaction)
+                                            .motionRow(index: index + 2, isVisible: dashboardAppeared)
+                                    }
+                                    .buttonStyle(MicroPressButtonStyle())
+                                    .contextMenu {
+                                        Button(role: .destructive) {
+                                            withAnimation(Motion.snappy) {
+                                                modelContext.delete(transaction)
+                                            }
+                                        } label: {
+                                            Label("Delete", systemImage: "trash")
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
-                }
 
-                Button {
-                    activeSheet = .categories
-                } label: {
-                    Label("Manage categories", systemImage: "tag")
+                    SectionPanel(title: "Budget signals", iconName: "chart.bar.xaxis") {
+                        let categoryBudgets = budgetsForMonth(monthStart).filter { $0.category != nil }
+
+                        if categoryBudgets.isEmpty {
+                            Text("No category budgets set.")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(Color.moniMuted)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        } else {
+                            VStack(spacing: 10) {
+                                ForEach(Array(categoryBudgets.enumerated()), id: \.offset) { index, budget in
+                                    if let category = budget.category {
+                                        CategoryBudgetRowView(
+                                            category: category,
+                                            budgetPaise: budget.totalBudgetPaise,
+                                            spentPaise: FinanceCalculator.monthlyExpenses(
+                                                in: transactions,
+                                                category: category,
+                                                month: monthStart
+                                            )
+                                        )
+                                        .motionRow(index: index + 4, isVisible: dashboardAppeared)
+                                    }
+                                }
+                            }
+                        }
+
+                        Button {
+                            withAnimation(Motion.snappy) {
+                                activeSheet = .categories
+                            }
+                        } label: {
+                            Label("Manage categories", systemImage: "tag")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(Color.moniLeaf)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.top, 6)
+                        }
+                        .buttonStyle(MicroPressButtonStyle())
+                    }
                 }
+                .padding(.horizontal, 18)
+                .padding(.top, 16)
+                .padding(.bottom, 118)
             }
+            .scrollIndicators(.hidden)
+        }
+    }
+
+    private func topControlStrip(title: String, subtitle: String) -> some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(Color.moniInk)
+                Text(subtitle)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(Color.moniMuted)
+            }
+
+            Spacer()
+
+            themeMenu
+                .labelStyle(.iconOnly)
+                .controlSize(.large)
+                .tint(Color.moniInk)
+
+            Button {
+                withAnimation(Motion.snappy) {
+                    activeSheet = .budget
+                }
+            } label: {
+                Image(systemName: "gauge.with.dots.needle.33percent")
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(Color.moniInk)
+                    .frame(width: 42, height: 42)
+                    .background(Color.moniSurface, in: Circle())
+                    .shadow(color: Color.moniInk.opacity(0.08), radius: 12, y: 6)
+            }
+            .buttonStyle(MicroPressButtonStyle())
+            .accessibilityLabel("Budget")
         }
     }
 
@@ -485,26 +541,50 @@ struct ContentView: View {
     }
 
     private var history: some View {
-        List {
-            Section("All transactions") {
-                if transactions.isEmpty {
-                    ContentUnavailableView(
-                        "No transactions yet",
-                        systemImage: "clock",
-                        description: Text("Tap the plus button to add an expense.")
-                    )
-                } else {
-                    ForEach(transactions) { transaction in
-                        Button {
-                            activeSheet = .transaction(type: transaction.type, transaction: transaction)
-                        } label: {
-                            TransactionRowView(transaction: transaction)
+        ZStack {
+            AppBackdrop()
+
+            ScrollView {
+                VStack(spacing: 18) {
+                    topControlStrip(title: "History", subtitle: "\(transactions.count) transactions")
+
+                    SectionPanel(title: "All transactions", iconName: "clock") {
+                        if transactions.isEmpty {
+                            EmptyStatePanel(
+                                title: "Nothing here yet",
+                                subtitle: "Tap the center plus to add an expense.",
+                                iconName: "clock"
+                            )
+                        } else {
+                            VStack(spacing: 10) {
+                                ForEach(transactions) { transaction in
+                                    Button {
+                                        withAnimation(Motion.snappy) {
+                                            activeSheet = .transaction(type: transaction.type, transaction: transaction)
+                                        }
+                                    } label: {
+                                        TransactionRowView(transaction: transaction)
+                                    }
+                                    .buttonStyle(MicroPressButtonStyle())
+                                    .contextMenu {
+                                        Button(role: .destructive) {
+                                            withAnimation(Motion.snappy) {
+                                                modelContext.delete(transaction)
+                                            }
+                                        } label: {
+                                            Label("Delete", systemImage: "trash")
+                                        }
+                                    }
+                                }
+                            }
                         }
-                        .buttonStyle(.plain)
                     }
-                    .onDelete(perform: deleteHistoryTransactions)
                 }
+                .padding(.horizontal, 18)
+                .padding(.top, 16)
+                .padding(.bottom, 118)
             }
+            .scrollIndicators(.hidden)
         }
     }
 
@@ -686,6 +766,317 @@ struct ContentView: View {
     }
 }
 
+private struct AppBackdrop: View {
+    var body: some View {
+        TimelineView(.animation) { timeline in
+            let t = timeline.date.timeIntervalSinceReferenceDate
+            let x = CGFloat((sin(t * 0.18) + 1) / 2)
+            let y = CGFloat((cos(t * 0.14) + 1) / 2)
+
+            ZStack {
+                LinearGradient(
+                    colors: [
+                        Color.moniCanvas,
+                        Color.moniMist,
+                        Color(red: 0.94, green: 0.97, blue: 0.91)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+
+                RadialGradient(
+                    colors: [Color.moniLeaf.opacity(0.24), .clear],
+                    center: UnitPoint(x: 0.10 + x * 0.28, y: 0.08 + y * 0.18),
+                    startRadius: 10,
+                    endRadius: 390
+                )
+
+                RadialGradient(
+                    colors: [Color.moniSky.opacity(0.22), .clear],
+                    center: UnitPoint(x: 0.86 - x * 0.16, y: 0.24 + y * 0.16),
+                    startRadius: 18,
+                    endRadius: 360
+                )
+
+                RadialGradient(
+                    colors: [Color.moniLime.opacity(0.28), .clear],
+                    center: UnitPoint(x: 0.30 + x * 0.18, y: 0.92),
+                    startRadius: 8,
+                    endRadius: 320
+                )
+            }
+        }
+        .ignoresSafeArea()
+    }
+}
+
+private struct SectionPanel<Content: View>: View {
+    let title: String
+    let iconName: String
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 10) {
+                Image(systemName: iconName)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(Color.moniLeaf)
+                    .frame(width: 30, height: 30)
+                    .background(Color.moniLeaf.opacity(0.10), in: Circle())
+
+                Text(title)
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(Color.moniInk)
+
+                Spacer()
+            }
+
+            content
+        }
+        .padding(16)
+        .background {
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(Color.moniSurface.opacity(0.92))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .stroke(Color.moniInk.opacity(0.05), lineWidth: 1)
+                }
+        }
+        .shadow(color: Color.moniInk.opacity(0.08), radius: 24, y: 14)
+    }
+}
+
+private struct EmptyStatePanel: View {
+    let title: String
+    let subtitle: String
+    let iconName: String
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Image(systemName: iconName)
+                .font(.title3.weight(.medium))
+                .foregroundStyle(Color.moniLeaf)
+                .frame(width: 44, height: 44)
+                .background(Color.moniLeaf.opacity(0.10), in: Circle())
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.moniInk)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(Color.moniMuted)
+            }
+
+            Spacer()
+        }
+        .padding(14)
+        .background(Color.moniMist.opacity(0.72), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+}
+
+private struct BudgetHeroCard: View {
+    let monthlySpentPaise: Int
+    let totalBudgetPaise: Int?
+    let budgetProgress: Double
+    let budgetState: BudgetColorState
+    let isVisible: Bool
+    let onBudgetTap: () -> Void
+
+    var body: some View {
+        VStack(spacing: 18) {
+            HStack(alignment: .top) {
+                Spacer(minLength: 44)
+                VStack(spacing: 6) {
+                    Text("This month")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(Color.moniMuted)
+                    Text(MoneyFormatting.display(monthlySpentPaise))
+                        .font(.system(size: 44, weight: .semibold))
+                        .foregroundStyle(Color.moniInk)
+                        .contentTransition(.numericText())
+                        .multilineTextAlignment(.center)
+                    Text("spent")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(Color.moniMuted)
+                }
+                .frame(maxWidth: .infinity)
+
+                Button(action: onBudgetTap) {
+                    Image(systemName: "slider.horizontal.3")
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(Color.moniInk)
+                        .frame(width: 38, height: 38)
+                        .background(Color.white.opacity(0.62), in: Circle())
+                }
+                .buttonStyle(MicroPressButtonStyle())
+                .accessibilityLabel("Edit budget")
+            }
+
+            if let totalBudgetPaise {
+                AnimatedProgressBar(progress: budgetProgress, state: budgetState)
+
+                HStack {
+                    Text("\(MoneyFormatting.display(max(totalBudgetPaise - monthlySpentPaise, 0))) left")
+                    Spacer()
+                    Text("Budget \(MoneyFormatting.display(totalBudgetPaise))")
+                }
+                .font(.footnote.weight(.medium))
+                .foregroundStyle(Color.moniMuted)
+                .contentTransition(.numericText())
+            } else {
+                Text("Set a monthly budget to grade spending.")
+                    .font(.footnote)
+                    .foregroundStyle(Color.moniMuted)
+            }
+        }
+        .padding(22)
+        .background {
+            AnimatedBudgetBackdrop(progress: budgetProgress, state: budgetState)
+                .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 30, style: .continuous)
+                .stroke(Color.white.opacity(0.72), lineWidth: 1)
+        }
+        .shadow(color: ambientShadowColor, radius: isVisible ? 32 : 8, y: isVisible ? 16 : 2)
+        .scaleEffect(isVisible ? 1 : 0.96)
+        .opacity(isVisible ? 1 : 0)
+        .offset(y: isVisible ? 0 : 16)
+    }
+
+    private var ambientShadowColor: Color {
+        switch budgetState {
+        case .neutral:
+            Color.moniInk.opacity(0.12)
+        case .green:
+            Color.moniLeaf.opacity(0.20)
+        case .yellow:
+            Color.moniAmber.opacity(0.22)
+        case .red:
+            Color.moniCoral.opacity(0.22)
+        }
+    }
+}
+
+private struct AnimatedBudgetBackdrop: View {
+    let progress: Double
+    let state: BudgetColorState
+
+    var body: some View {
+        TimelineView(.animation) { timeline in
+            let t = timeline.date.timeIntervalSinceReferenceDate
+            let drift = CGFloat((sin(t * 0.35) + 1) / 2)
+
+            LinearGradient(
+                colors: colors,
+                startPoint: UnitPoint(x: 0.05 + drift * 0.20, y: 0),
+                endPoint: UnitPoint(x: 0.90 - drift * 0.12, y: 1)
+            )
+            .overlay {
+                LinearGradient(
+                    colors: [
+                        Color.white.opacity(0.18 + min(progress, 1) * 0.08),
+                        Color.clear,
+                        Color.moniInk.opacity(0.03)
+                    ],
+                    startPoint: UnitPoint(x: drift, y: 0),
+                    endPoint: UnitPoint(x: 1 - drift, y: 1)
+                )
+                .blendMode(.overlay)
+            }
+        }
+    }
+
+    private var colors: [Color] {
+        switch state {
+        case .neutral:
+            [Color.white, Color.moniMist, Color.moniSky.opacity(0.18)]
+        case .green:
+            progress < 0.5
+                ? [Color.white, Color.moniLime.opacity(0.72), Color.moniSky.opacity(0.18)]
+                : [Color.white, Color.moniLeaf.opacity(0.30), Color.moniLime.opacity(0.56)]
+        case .yellow:
+            [Color.white, Color.moniAmber.opacity(0.42), Color.moniLime.opacity(0.26)]
+        case .red:
+            [Color.white, Color.moniCoral.opacity(0.26), Color.moniAmber.opacity(0.22)]
+        }
+    }
+}
+
+private struct AnimatedProgressBar: View {
+    let progress: Double
+    let state: BudgetColorState
+
+    var body: some View {
+        GeometryReader { proxy in
+            let clamped = min(max(progress, 0), 1)
+
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(Color.moniInk.opacity(0.08))
+
+                Capsule()
+                    .fill(color)
+                    .frame(width: proxy.size.width * clamped)
+                    .animation(Motion.snappy, value: clamped)
+            }
+        }
+        .frame(height: 9)
+    }
+
+    private var color: Color {
+        switch state {
+        case .neutral:
+            Color.moniInk.opacity(0.54)
+        case .green:
+            Color.moniLeaf
+        case .yellow:
+            Color.moniAmber
+        case .red:
+            Color.moniCoral
+        }
+    }
+}
+
+private extension View {
+    func motionRow(index: Int, isVisible: Bool) -> some View {
+        self
+            .opacity(isVisible ? 1 : 0)
+            .offset(y: isVisible ? 0 : 10)
+            .animation(Motion.entrance.delay(Double(index) * 0.035), value: isVisible)
+    }
+}
+
+private struct MicroPressButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.94 : 1)
+            .opacity(configuration.isPressed ? 0.82 : 1)
+            .animation(Motion.micro, value: configuration.isPressed)
+    }
+}
+
+private enum Motion {
+    static let micro = Animation.spring(response: 0.16, dampingFraction: 0.74)
+    static let snappy = Animation.spring(response: 0.28, dampingFraction: 0.82)
+    static let bouncy = Animation.spring(response: 0.34, dampingFraction: 0.68)
+    static let entrance = Animation.spring(response: 0.42, dampingFraction: 0.86)
+}
+
+private extension Color {
+    static let moniCanvas = Color(red: 0.955, green: 0.965, blue: 0.935)
+    static let moniSurface = Color(red: 0.995, green: 0.996, blue: 0.980)
+    static let moniMist = Color(red: 0.910, green: 0.940, blue: 0.900)
+    static let moniInk = Color(red: 0.070, green: 0.095, blue: 0.090)
+    static let moniMuted = Color(red: 0.410, green: 0.455, blue: 0.420)
+    static let moniLeaf = Color(red: 0.255, green: 0.655, blue: 0.315)
+    static let moniLime = Color(red: 0.770, green: 0.925, blue: 0.365)
+    static let moniSky = Color(red: 0.650, green: 0.835, blue: 0.920)
+    static let moniAmber = Color(red: 0.940, green: 0.645, blue: 0.210)
+    static let moniCoral = Color(red: 0.900, green: 0.315, blue: 0.270)
+}
+
 private enum AppTab {
     case home
     case history
@@ -696,6 +1087,33 @@ private enum AppTab {
             ""
         case .history:
             "History"
+        }
+    }
+
+    var label: String {
+        switch self {
+        case .home:
+            "Home"
+        case .history:
+            "History"
+        }
+    }
+
+    var iconName: String {
+        switch self {
+        case .home:
+            "house"
+        case .history:
+            "clock"
+        }
+    }
+
+    var filledIconName: String {
+        switch self {
+        case .home:
+            "house.fill"
+        case .history:
+            "clock.fill"
         }
     }
 }
@@ -798,22 +1216,42 @@ private struct AccountRowView: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: account.type.iconName)
-                .frame(width: 30, height: 30)
-                .background(.thinMaterial, in: Circle())
+                .font(.headline.weight(.medium))
+                .foregroundStyle(Color.moniInk)
+                .frame(width: 42, height: 42)
+                .background(accountAccent, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
 
-            VStack(alignment: .leading) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(account.name)
-                    .font(.headline)
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(Color.moniInk)
                 Text(account.type.title)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.moniMuted)
             }
 
             Spacer()
 
             Text(MoneyFormatting.display(balancePaise))
                 .font(.headline.monospacedDigit())
-                .foregroundStyle(balancePaise < 0 ? .red : .primary)
+                .foregroundStyle(balancePaise < 0 ? Color.moniCoral : Color.moniInk)
+        }
+        .padding(12)
+        .background(Color.moniSurface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.moniInk.opacity(0.05), lineWidth: 1)
+        }
+    }
+
+    private var accountAccent: Color {
+        switch account.type {
+        case .cash:
+            Color.moniLime
+        case .bank:
+            Color.moniSky
+        case .creditCard:
+            Color.moniAmber
         }
     }
 }
@@ -824,15 +1262,18 @@ private struct TransactionRowView: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: iconName)
-                .frame(width: 30, height: 30)
-                .background(.thinMaterial, in: Circle())
+                .font(.headline.weight(.medium))
+                .foregroundStyle(Color.moniInk)
+                .frame(width: 42, height: 42)
+                .background(amountColor.opacity(0.95), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(primaryText)
-                    .font(.headline)
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(Color.moniInk)
                 Text(transaction.date, format: .dateTime.day().month().year())
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.moniMuted)
             }
 
             Spacer()
@@ -840,6 +1281,12 @@ private struct TransactionRowView: View {
             Text(amountText)
                 .font(.headline.monospacedDigit())
                 .foregroundStyle(amountColor)
+        }
+        .padding(12)
+        .background(Color.moniSurface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.moniInk.opacity(0.05), lineWidth: 1)
         }
     }
 
@@ -882,11 +1329,11 @@ private struct TransactionRowView: View {
     private var amountColor: Color {
         switch transaction.type {
         case .expense:
-            .red
+            Color.moniCoral
         case .income:
-            .green
+            Color.moniLeaf
         case .transfer:
-            .secondary
+            Color.moniSky
         }
     }
 }
@@ -929,16 +1376,17 @@ private struct QuickCategoryPickerOverlay: View {
                             .fill(sectorFillColor(isHighlighted: isHighlighted))
                             .overlay {
                                 AnnularSector(startAngle: startAngle, endAngle: endAngle, innerRadiusRatio: 0.44)
-                                    .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+                                    .stroke(Color.moniInk.opacity(0.08), lineWidth: 1)
                             }
                             .animation(.easeOut(duration: 0.14), value: isHighlighted)
 
                         if let iconPoint = centers[category.persistentModelID] {
                             Image(systemName: categoryIconName(for: category))
-                                .font(.title3.weight(.semibold))
-                                .foregroundStyle(isHighlighted ? Color.white : Color.primary)
+                                .font(.title3.weight(.medium))
+                                .foregroundStyle(Color.moniInk)
                                 .frame(width: 46, height: 46)
-                                .background(isHighlighted ? Color.primary : Color(.systemBackground), in: Circle())
+                                .background(isHighlighted ? Color.moniLime : Color.moniSurface, in: Circle())
+                                .scaleEffect(isHighlighted ? 1.12 : 1)
                                 .position(
                                     x: iconPoint.x - center.x + ringSize / 2,
                                     y: iconPoint.y - center.y + ringSize / 2
@@ -947,20 +1395,20 @@ private struct QuickCategoryPickerOverlay: View {
                     }
 
                     Circle()
-                        .fill(Color(.systemBackground))
+                        .fill(Color.moniSurface.opacity(0.96))
                         .frame(width: ringSize * 0.44, height: ringSize * 0.44)
                         .overlay {
                             Circle()
-                                .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+                                .stroke(Color.moniInk.opacity(0.08), lineWidth: 1)
                         }
                 }
                 .frame(width: ringSize, height: ringSize)
-                .shadow(color: .black.opacity(0.18), radius: 22, y: 10)
+                .shadow(color: Color.moniInk.opacity(0.12), radius: 28, y: 14)
                 .position(center)
 
                 Text(MoneyFormatting.display(amountPaise))
-                    .font(.system(size: 30, weight: .bold, design: .rounded))
-                    .foregroundStyle(.primary)
+                    .font(.system(size: 30, weight: .semibold))
+                    .foregroundStyle(Color.moniInk)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
                     .shadow(color: .black.opacity(0.12), radius: 10, y: 4)
@@ -1003,7 +1451,7 @@ private struct QuickCategoryPickerOverlay: View {
     }
 
     private func sectorFillColor(isHighlighted: Bool) -> Color {
-        isHighlighted ? Color.primary.opacity(0.18) : Color(.secondarySystemBackground)
+        isHighlighted ? Color.moniLime.opacity(0.55) : Color.moniSurface.opacity(0.72)
     }
 
     private func categoryIconName(for category: SpendingCategory) -> String {
@@ -1076,15 +1524,24 @@ private struct CategoryBudgetRowView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text(category.name)
-                    .font(.headline)
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(Color.moniInk)
                 Spacer()
                 Text("\(MoneyFormatting.display(spentPaise)) / \(MoneyFormatting.display(budgetPaise))")
                     .font(.subheadline.monospacedDigit())
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.moniMuted)
             }
 
-            ProgressView(value: FinanceCalculator.progress(spentPaise: spentPaise, budgetPaise: budgetPaise))
-                .tint(tint(for: state))
+            AnimatedProgressBar(
+                progress: FinanceCalculator.progress(spentPaise: spentPaise, budgetPaise: budgetPaise),
+                state: state
+            )
+        }
+        .padding(12)
+        .background(Color.moniSurface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.moniInk.opacity(0.05), lineWidth: 1)
         }
     }
 
@@ -1102,6 +1559,174 @@ private struct CategoryBudgetRowView: View {
     }
 }
 
+private struct PaynoSheetScaffold<Content: View>: View {
+    let title: String
+    let subtitle: String?
+    let primaryTitle: String?
+    let primaryDisabled: Bool
+    let onCancel: (() -> Void)?
+    let onPrimary: (() -> Void)?
+    @ViewBuilder let content: Content
+
+    init(
+        title: String,
+        subtitle: String? = nil,
+        primaryTitle: String? = nil,
+        primaryDisabled: Bool = false,
+        onCancel: (() -> Void)? = nil,
+        onPrimary: (() -> Void)? = nil,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.title = title
+        self.subtitle = subtitle
+        self.primaryTitle = primaryTitle
+        self.primaryDisabled = primaryDisabled
+        self.onCancel = onCancel
+        self.onPrimary = onPrimary
+        self.content = content()
+    }
+
+    var body: some View {
+        ZStack {
+            AppBackdrop()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    HStack(alignment: .top, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text(title)
+                                .font(.title2.weight(.semibold))
+                                .foregroundStyle(Color.moniInk)
+
+                            if let subtitle {
+                                Text(subtitle)
+                                    .font(.subheadline)
+                                    .foregroundStyle(Color.moniMuted)
+                            }
+                        }
+
+                        Spacer()
+
+                        if let onCancel {
+                            Button(action: onCancel) {
+                                Image(systemName: "xmark")
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundStyle(Color.moniInk)
+                                    .frame(width: 38, height: 38)
+                                    .background(Color.moniSurface, in: Circle())
+                                    .shadow(color: Color.moniInk.opacity(0.08), radius: 12, y: 6)
+                            }
+                            .buttonStyle(MicroPressButtonStyle())
+                            .accessibilityLabel("Cancel")
+                        }
+                    }
+
+                    content
+
+                    if let primaryTitle, let onPrimary {
+                        Button(primaryTitle, action: onPrimary)
+                            .buttonStyle(PaynoPrimaryButtonStyle())
+                            .disabled(primaryDisabled)
+                            .opacity(primaryDisabled ? 0.45 : 1)
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 24)
+                .padding(.bottom, 34)
+            }
+            .scrollIndicators(.hidden)
+        }
+    }
+}
+
+private struct PaynoInputField: View {
+    let title: String
+    let placeholder: String
+    @Binding var text: String
+    var keyboardType: UIKeyboardType = .default
+    var axis: Axis = .horizontal
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(Color.moniMuted)
+
+            TextField(placeholder, text: $text, axis: axis)
+                .font(.body)
+                .foregroundStyle(Color.moniInk)
+                .keyboardType(keyboardType)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 13)
+                .background(Color.moniMist.opacity(0.70), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(Color.moniInk.opacity(0.05), lineWidth: 1)
+                }
+        }
+    }
+}
+
+private struct PaynoOptionRow<Content: View>: View {
+    let title: String
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Text(title)
+                .font(.subheadline)
+                .foregroundStyle(Color.moniMuted)
+
+            Spacer()
+
+            content
+                .font(.body)
+                .foregroundStyle(Color.moniInk)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 13)
+        .background(Color.moniMist.opacity(0.70), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.moniInk.opacity(0.05), lineWidth: 1)
+        }
+    }
+}
+
+private struct PaynoPrimaryButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.body.weight(.medium))
+            .foregroundStyle(Color.moniSurface)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 15)
+            .background(
+                LinearGradient(
+                    colors: [Color.moniInk, Color.moniLeaf],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ),
+                in: RoundedRectangle(cornerRadius: 18, style: .continuous)
+            )
+            .shadow(color: Color.moniLeaf.opacity(configuration.isPressed ? 0.12 : 0.22), radius: configuration.isPressed ? 8 : 18, y: configuration.isPressed ? 4 : 10)
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .animation(Motion.micro, value: configuration.isPressed)
+    }
+}
+
+private struct PaynoDestructiveButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.body.weight(.medium))
+            .foregroundStyle(Color.moniCoral)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(Color.moniCoral.opacity(0.10), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .animation(Motion.micro, value: configuration.isPressed)
+    }
+}
+
 private struct FirstAccountSetupView: View {
     @Environment(\.modelContext) private var modelContext
     let categories: [SpendingCategory]
@@ -1112,35 +1737,45 @@ private struct FirstAccountSetupView: View {
     @State private var monthlyBudget = ""
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section("First account") {
-                    TextField("Account name", text: $name)
+        PaynoSheetScaffold(
+            title: "Set up",
+            subtitle: "Create the account you want to track first.",
+            primaryTitle: "Start tracking",
+            primaryDisabled: name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+            onPrimary: createAccount
+        ) {
+            SectionPanel(title: "First account", iconName: "wallet.pass") {
+                VStack(spacing: 12) {
+                    PaynoInputField(title: "Name", placeholder: "Account name", text: $name)
 
-                    Picker("Type", selection: $type) {
-                        ForEach(AccountType.allCases) { accountType in
-                            Label(accountType.title, systemImage: accountType.iconName)
-                                .tag(accountType)
+                    PaynoOptionRow(title: "Type") {
+                        Picker("Type", selection: $type) {
+                            ForEach(AccountType.allCases) { accountType in
+                                Label(accountType.title, systemImage: accountType.iconName)
+                                    .tag(accountType)
+                            }
                         }
+                        .labelsHidden()
+                        .tint(Color.moniInk)
                     }
 
-                    TextField("Opening balance", text: $openingBalance)
-                        .keyboardType(.decimalPad)
-                }
-
-                Section("Monthly budget") {
-                    TextField("Total monthly budget", text: $monthlyBudget)
-                        .keyboardType(.decimalPad)
-                }
-
-                Section {
-                    Button("Start tracking") {
-                        createAccount()
-                    }
-                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    PaynoInputField(
+                        title: "Opening balance",
+                        placeholder: "0",
+                        text: $openingBalance,
+                        keyboardType: .decimalPad
+                    )
                 }
             }
-            .navigationTitle("Set up Moni")
+
+            SectionPanel(title: "Monthly budget", iconName: "chart.pie") {
+                PaynoInputField(
+                    title: "Total budget",
+                    placeholder: "0",
+                    text: $monthlyBudget,
+                    keyboardType: .decimalPad
+                )
+            }
         }
     }
 
@@ -1194,39 +1829,43 @@ private struct AccountFormView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section("Account") {
-                    TextField("Name", text: $name)
+        PaynoSheetScaffold(
+            title: account == nil ? "Add account" : "Edit account",
+            subtitle: "Set the account type and opening balance.",
+            primaryTitle: "Save",
+            primaryDisabled: name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+            onCancel: { dismiss() },
+            onPrimary: save
+        ) {
+            SectionPanel(title: "Account", iconName: "wallet.pass") {
+                VStack(spacing: 12) {
+                    PaynoInputField(title: "Name", placeholder: "Account name", text: $name)
 
-                    Picker("Type", selection: $type) {
-                        ForEach(AccountType.allCases) { accountType in
-                            Label(accountType.title, systemImage: accountType.iconName)
-                                .tag(accountType)
+                    PaynoOptionRow(title: "Type") {
+                        Picker("Type", selection: $type) {
+                            ForEach(AccountType.allCases) { accountType in
+                                Label(accountType.title, systemImage: accountType.iconName)
+                                    .tag(accountType)
+                            }
                         }
+                        .labelsHidden()
+                        .tint(Color.moniInk)
                     }
 
-                    TextField("Opening balance", text: $openingBalance)
-                        .keyboardType(.decimalPad)
+                    PaynoInputField(
+                        title: "Opening balance",
+                        placeholder: "0",
+                        text: $openingBalance,
+                        keyboardType: .decimalPad
+                    )
 
                     if account != nil {
-                        Toggle("Archived", isOn: $isArchived)
+                        PaynoOptionRow(title: "Archived") {
+                            Toggle("Archived", isOn: $isArchived)
+                                .labelsHidden()
+                                .tint(Color.moniLeaf)
+                        }
                     }
-                }
-            }
-            .navigationTitle(account == nil ? "Add account" : "Edit account")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        save()
-                    }
-                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
         }
@@ -1293,9 +1932,16 @@ private struct TransactionFormView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section("Type") {
+        PaynoSheetScaffold(
+            title: transaction == nil ? "Add \(type.title)" : "Edit \(type.title)",
+            subtitle: "Record movement without leaving the flow.",
+            primaryTitle: "Save",
+            primaryDisabled: !canSave,
+            onCancel: { dismiss() },
+            onPrimary: save
+        ) {
+            SectionPanel(title: "Type", iconName: "arrow.up.arrow.down") {
+                VStack(spacing: 12) {
                     Picker("Type", selection: $type) {
                         ForEach(TransactionType.allCases) { transactionType in
                             Text(transactionType.title).tag(transactionType)
@@ -1303,64 +1949,72 @@ private struct TransactionFormView: View {
                     }
                     .pickerStyle(.segmented)
                 }
+            }
 
-                Section("Details") {
-                    TextField("Amount", text: $amount)
-                        .keyboardType(.decimalPad)
+            SectionPanel(title: "Details", iconName: "square.and.pencil") {
+                VStack(spacing: 12) {
+                    PaynoInputField(
+                        title: "Amount",
+                        placeholder: "0",
+                        text: $amount,
+                        keyboardType: .decimalPad
+                    )
 
-                    DatePicker("Date", selection: $date, displayedComponents: .date)
-
-                    Picker(type == .transfer ? "From" : "Account", selection: $accountID) {
-                        ForEach(accounts) { account in
-                            Text(account.name).tag(Optional(account.persistentModelID))
-                        }
+                    PaynoOptionRow(title: "Date") {
+                        DatePicker("Date", selection: $date, displayedComponents: .date)
+                            .labelsHidden()
+                            .tint(Color.moniLeaf)
                     }
 
-                    if type == .transfer {
-                        Picker("To", selection: $destinationAccountID) {
+                    PaynoOptionRow(title: type == .transfer ? "From" : "Account") {
+                        Picker(type == .transfer ? "From" : "Account", selection: $accountID) {
                             ForEach(accounts) { account in
                                 Text(account.name).tag(Optional(account.persistentModelID))
                             }
                         }
+                        .labelsHidden()
+                        .tint(Color.moniInk)
+                    }
+
+                    if type == .transfer {
+                        PaynoOptionRow(title: "To") {
+                            Picker("To", selection: $destinationAccountID) {
+                                ForEach(accounts) { account in
+                                    Text(account.name).tag(Optional(account.persistentModelID))
+                                }
+                            }
+                            .labelsHidden()
+                            .tint(Color.moniInk)
+                        }
                     }
 
                     if type == .expense {
-                        Picker("Category", selection: $categoryID) {
-                            ForEach(categories) { category in
-                                Text(category.name).tag(Optional(category.persistentModelID))
+                        PaynoOptionRow(title: "Category") {
+                            Picker("Category", selection: $categoryID) {
+                                ForEach(categories) { category in
+                                    Text(category.name).tag(Optional(category.persistentModelID))
+                                }
                             }
-                        }
-                    }
-                }
-
-                Section("Optional") {
-                    TextField(type == .expense ? "Payee" : "Label", text: $payee)
-                    TextField("Note", text: $note, axis: .vertical)
-                        .lineLimit(2...4)
-                }
-
-                if transaction != nil {
-                    Section {
-                        Button("Delete transaction", role: .destructive) {
-                            deleteTransaction()
+                            .labelsHidden()
+                            .tint(Color.moniInk)
                         }
                     }
                 }
             }
-            .navigationTitle(transaction == nil ? "Add \(type.title)" : "Edit \(type.title)")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
 
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        save()
-                    }
-                    .disabled(!canSave)
+            SectionPanel(title: "Optional", iconName: "text.alignleft") {
+                VStack(spacing: 12) {
+                    PaynoInputField(title: type == .expense ? "Payee" : "Label", placeholder: type == .expense ? "Payee" : "Label", text: $payee)
+                    PaynoInputField(title: "Note", placeholder: "Note", text: $note, axis: .vertical)
+                        .lineLimit(2...4)
                 }
+            }
+
+            if transaction != nil {
+                Button("Delete transaction", role: .destructive) {
+                    deleteTransaction()
+                }
+                .buttonStyle(PaynoDestructiveButtonStyle())
             }
         }
     }
@@ -1465,34 +2119,31 @@ private struct BudgetFormView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section("Monthly total") {
-                    TextField("Total budget", text: $totalBudget)
-                        .keyboardType(.decimalPad)
-                }
-
-                Section("Categories") {
-                    ForEach(categories) { category in
-                        TextField(
-                            category.name,
-                            text: binding(for: category)
-                        )
-                        .keyboardType(.decimalPad)
-                    }
-                }
+        PaynoSheetScaffold(
+            title: "Budgets",
+            subtitle: "Set this month’s total and category limits.",
+            primaryTitle: "Save",
+            onCancel: { dismiss() },
+            onPrimary: save
+        ) {
+            SectionPanel(title: "Monthly total", iconName: "chart.pie") {
+                PaynoInputField(
+                    title: "Total budget",
+                    placeholder: "0",
+                    text: $totalBudget,
+                    keyboardType: .decimalPad
+                )
             }
-            .navigationTitle("Budgets")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
 
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        save()
+            SectionPanel(title: "Categories", iconName: "tag") {
+                VStack(spacing: 12) {
+                    ForEach(categories) { category in
+                        PaynoInputField(
+                            title: category.name,
+                            placeholder: "0",
+                            text: binding(for: category),
+                            keyboardType: .decimalPad
+                        )
                     }
                 }
             }
@@ -1566,33 +2217,43 @@ private struct CategoryManagerView: View {
     @State private var newCategoryName = ""
 
     var body: some View {
-        NavigationStack {
-            List {
-                Section("Add category") {
-                    HStack {
-                        TextField("Category name", text: $newCategoryName)
+        PaynoSheetScaffold(
+            title: "Categories",
+            subtitle: "Create and tune the categories used by quick expense.",
+            primaryTitle: "Done",
+            onPrimary: { dismiss() }
+        ) {
+            SectionPanel(title: "Add category", iconName: "plus") {
+                HStack(spacing: 10) {
+                    PaynoInputField(title: "Name", placeholder: "Category name", text: $newCategoryName)
 
+                    VStack {
+                        Spacer(minLength: 22)
                         Button {
                             addCategory()
                         } label: {
                             Image(systemName: "plus.circle.fill")
+                                .font(.title2.weight(.medium))
+                                .foregroundStyle(Color.moniLeaf)
+                                .frame(width: 48, height: 48)
+                                .background(Color.moniLeaf.opacity(0.10), in: Circle())
                         }
+                        .buttonStyle(MicroPressButtonStyle())
                         .disabled(newCategoryName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
                 }
-
-                Section("Categories") {
-                    ForEach(categories) { category in
-                        CategoryEditRow(category: category)
-                    }
-                    .onDelete(perform: deleteCategories)
-                }
             }
-            .navigationTitle("Categories")
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
-                        dismiss()
+
+            SectionPanel(title: "Categories", iconName: "tag") {
+                if categories.isEmpty {
+                    EmptyStatePanel(title: "No categories", subtitle: "Add a category to use quick expense.", iconName: "tag")
+                } else {
+                    VStack(spacing: 12) {
+                        ForEach(Array(categories.enumerated()), id: \.element.persistentModelID) { index, category in
+                            CategoryEditRow(category: category) {
+                                deleteCategory(at: index)
+                            }
+                        }
                     }
                 }
             }
@@ -1612,25 +2273,43 @@ private struct CategoryManagerView: View {
             modelContext.delete(categories[index])
         }
     }
+
+    private func deleteCategory(at index: Int) {
+        modelContext.delete(categories[index])
+    }
 }
 
 private struct CategoryEditRow: View {
     let category: SpendingCategory
+    let onDelete: () -> Void
     @State private var name: String
 
-    init(category: SpendingCategory) {
+    init(category: SpendingCategory, onDelete: @escaping () -> Void) {
         self.category = category
+        self.onDelete = onDelete
         _name = State(initialValue: category.name)
     }
 
     var body: some View {
-        TextField("Category", text: $name)
-            .onSubmit {
-                category.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        HStack(spacing: 10) {
+            PaynoInputField(title: "Category", placeholder: "Category", text: $name)
+                .onSubmit {
+                    category.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                }
+                .onChange(of: name) {
+                    category.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                }
+
+            Button(role: .destructive, action: onDelete) {
+                Image(systemName: "trash")
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(Color.moniCoral)
+                    .frame(width: 44, height: 44)
+                    .background(Color.moniCoral.opacity(0.10), in: Circle())
             }
-            .onChange(of: name) {
-                category.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
-            }
+            .buttonStyle(MicroPressButtonStyle())
+            .padding(.top, 22)
+        }
     }
 }
 
