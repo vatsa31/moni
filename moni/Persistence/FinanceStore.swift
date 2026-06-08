@@ -73,6 +73,48 @@ enum FinanceStore {
     }
 
     @MainActor
+    static func addImportedTransaction(
+        amountPaise: Int,
+        type: TransactionType,
+        categoryName: String?,
+        payee: String,
+        note: String
+    ) throws {
+        let context = sharedModelContainer.mainContext
+        let accountDescriptor = FetchDescriptor<Account>(
+            predicate: #Predicate { account in
+                account.isArchived == false
+            },
+            sortBy: [SortDescriptor(\.createdAt)]
+        )
+
+        guard let account = try context.fetch(accountDescriptor).first else {
+            throw ShortcutExpenseError.noActiveAccount
+        }
+
+        let resolvedCategory: SpendingCategory?
+        if type == .expense, let categoryName {
+            resolvedCategory = try category(named: categoryName, in: context)
+        } else {
+            resolvedCategory = nil
+        }
+
+        context.insert(
+            MoneyTransaction(
+                amountPaise: amountPaise,
+                date: .now,
+                type: type,
+                account: account,
+                category: resolvedCategory,
+                payee: payee,
+                note: note
+            )
+        )
+
+        try context.save()
+    }
+
+    @MainActor
     private static func category(named categoryName: String, in context: ModelContext) throws -> SpendingCategory {
         let descriptor = FetchDescriptor<SpendingCategory>(
             predicate: #Predicate { category in

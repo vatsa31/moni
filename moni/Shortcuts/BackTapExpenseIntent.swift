@@ -214,5 +214,14 @@ struct MoniAppShortcuts: AppShortcutsProvider {
             shortTitle: "Add Expense",
             systemImageName: "indianrupeesign.circle"
         )
+        AppShortcut(
+            intent: ImportTransactionFromSMSIntent(),
+            phrases: [
+                "Import transaction in \(.applicationName)",
+                "Import SMS transaction in \(.applicationName)"
+            ],
+            shortTitle: "Import SMS",
+            systemImageName: "message.badge"
+        )
     }
 }
