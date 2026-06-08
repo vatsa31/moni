@@ -19,6 +19,8 @@ struct ContentView: View {
     @Query(sort: \MonthlyBudget.monthStart, order: .reverse) var budgets: [MonthlyBudget]
 
     @AppStorage("appTheme") var appThemeRawValue = AppTheme.system.rawValue
+    @AppStorage(ThemeStorageKey.useCustomTheme) var useCustomTheme = false
+    @AppStorage(ThemeStorageKey.customThemeJSON) var customThemeJSON = ""
     @State var activeSheet: ActiveSheet?
     @State var selectedTab: AppTab = .home
     @State var quickAmountPaise = 1_000
@@ -93,6 +95,8 @@ struct ContentView: View {
                 BudgetFormView(categories: categories, budgets: budgets)
             case .categories:
                 CategoryManagerView(categories: categories)
+            case .themeBuilder:
+                ThemeBuilderView()
             }
         }
     }
@@ -105,6 +109,14 @@ struct ContentView: View {
                 } label: {
                     Label(theme.title, systemImage: theme == appTheme ? "checkmark" : theme.iconName)
                 }
+            }
+
+            Divider()
+
+            Button {
+                activeSheet = .themeBuilder
+            } label: {
+                Label("Customize theme", systemImage: "paintpalette")
             }
         } label: {
             Label("Theme", systemImage: appTheme.iconName)

@@ -125,6 +125,7 @@ enum ActiveSheet: Identifiable {
     case account(Account?)
     case budget
     case categories
+    case themeBuilder
 
     var id: String {
         switch self {
@@ -136,6 +137,8 @@ enum ActiveSheet: Identifiable {
             "budget"
         case .categories:
             "categories"
+        case .themeBuilder:
+            "themeBuilder"
         }
     }
 }

@@ -295,20 +295,6 @@ enum Motion {
     static let entrance = Animation.spring(response: 0.42, dampingFraction: 0.86)
 }
 
-extension Color {
-    static let moniCanvas = Color(red: 0.955, green: 0.965, blue: 0.935)
-    static let moniSurface = Color(red: 0.995, green: 0.996, blue: 0.980)
-    static let moniMist = Color(red: 0.910, green: 0.940, blue: 0.900)
-    static let moniInk = Color(red: 0.070, green: 0.095, blue: 0.090)
-    static let moniMuted = Color(red: 0.410, green: 0.455, blue: 0.420)
-    static let moniLeaf = Color(red: 0.255, green: 0.655, blue: 0.315)
-    static let moniLime = Color(red: 0.770, green: 0.925, blue: 0.365)
-    static let moniSky = Color(red: 0.650, green: 0.835, blue: 0.920)
-    static let moniAmber = Color(red: 0.940, green: 0.645, blue: 0.210)
-    static let moniCoral = Color(red: 0.900, green: 0.315, blue: 0.270)
-}
-
-
 struct PaynoSheetScaffold<Content: View>: View {
     let title: String
     let subtitle: String?
