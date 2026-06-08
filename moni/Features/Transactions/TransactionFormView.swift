@@ -34,7 +34,7 @@ struct TransactionFormView: View {
         self.categories = categories
 
         _type = State(initialValue: transaction?.type ?? initialType)
-        _amount = State(initialValue: MoneyFormatting.rupeesText(fromPaise: transaction?.amountPaise ?? 0))
+        _amount = State(initialValue: transaction.map { MoneyFormatting.rupeesText(fromPaise: $0.amountPaise) } ?? "")
         _date = State(initialValue: transaction?.date ?? .now)
         _accountID = State(initialValue: transaction?.account?.persistentModelID ?? accounts.first?.persistentModelID)
         _destinationAccountID = State(initialValue: transaction?.destinationAccount?.persistentModelID ?? accounts.dropFirst().first?.persistentModelID)
@@ -67,7 +67,7 @@ struct TransactionFormView: View {
                 VStack(spacing: 12) {
                     PaynoInputField(
                         title: "Amount",
-                        placeholder: "0",
+                        placeholder: "Amount",
                         text: $amount,
                         keyboardType: .decimalPad
                     )

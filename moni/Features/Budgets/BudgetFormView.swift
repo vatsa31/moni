@@ -32,10 +32,10 @@ struct BudgetFormView: View {
                 Calendar.current.isDate($0.monthStart, inSameMonthAs: .now)
                     && $0.category === category
             }
-            categoryValues[category.persistentModelID] = MoneyFormatting.rupeesText(fromPaise: budget?.totalBudgetPaise ?? 0)
+            categoryValues[category.persistentModelID] = budget.map { MoneyFormatting.rupeesText(fromPaise: $0.totalBudgetPaise) } ?? ""
         }
 
-        _totalBudget = State(initialValue: MoneyFormatting.rupeesText(fromPaise: currentTotal))
+        _totalBudget = State(initialValue: currentTotal > 0 ? MoneyFormatting.rupeesText(fromPaise: currentTotal) : "")
         _categoryBudgetTexts = State(initialValue: categoryValues)
     }
 
@@ -50,7 +50,7 @@ struct BudgetFormView: View {
             SectionPanel(title: "Monthly total", iconName: "chart.pie") {
                 PaynoInputField(
                     title: "Total budget",
-                    placeholder: "0",
+                    placeholder: "Monthly budget",
                     text: $totalBudget,
                     keyboardType: .decimalPad
                 )
@@ -61,7 +61,7 @@ struct BudgetFormView: View {
                     ForEach(categories) { category in
                         PaynoInputField(
                             title: category.name,
-                            placeholder: "0",
+                            placeholder: "Category budget",
                             text: binding(for: category),
                             keyboardType: .decimalPad
                         )

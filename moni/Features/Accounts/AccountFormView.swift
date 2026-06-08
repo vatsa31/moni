@@ -21,7 +21,7 @@ struct AccountFormView: View {
         self.account = account
         _name = State(initialValue: account?.name ?? "")
         _type = State(initialValue: account?.type ?? .bank)
-        _openingBalance = State(initialValue: MoneyFormatting.rupeesText(fromPaise: account?.openingBalancePaise ?? 0))
+        _openingBalance = State(initialValue: account.map { MoneyFormatting.rupeesText(fromPaise: $0.openingBalancePaise) } ?? "")
         _isArchived = State(initialValue: account?.isArchived ?? false)
     }
 
@@ -51,7 +51,7 @@ struct AccountFormView: View {
 
                     PaynoInputField(
                         title: "Opening balance",
-                        placeholder: "0",
+                        placeholder: "Opening balance",
                         text: $openingBalance,
                         keyboardType: .decimalPad
                     )

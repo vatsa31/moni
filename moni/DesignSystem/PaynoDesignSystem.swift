@@ -10,43 +10,37 @@ import UIKit
 
 struct AppBackdrop: View {
     var body: some View {
-        TimelineView(.animation) { timeline in
-            let t = timeline.date.timeIntervalSinceReferenceDate
-            let x = CGFloat((sin(t * 0.18) + 1) / 2)
-            let y = CGFloat((cos(t * 0.14) + 1) / 2)
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color.moniCanvas,
+                    Color.moniMist,
+                    Color(red: 0.94, green: 0.97, blue: 0.91)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
 
-            ZStack {
-                LinearGradient(
-                    colors: [
-                        Color.moniCanvas,
-                        Color.moniMist,
-                        Color(red: 0.94, green: 0.97, blue: 0.91)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
+            RadialGradient(
+                colors: [Color.moniLeaf.opacity(0.22), .clear],
+                center: UnitPoint(x: 0.18, y: 0.12),
+                startRadius: 10,
+                endRadius: 390
+            )
 
-                RadialGradient(
-                    colors: [Color.moniLeaf.opacity(0.24), .clear],
-                    center: UnitPoint(x: 0.10 + x * 0.28, y: 0.08 + y * 0.18),
-                    startRadius: 10,
-                    endRadius: 390
-                )
+            RadialGradient(
+                colors: [Color.moniSky.opacity(0.20), .clear],
+                center: UnitPoint(x: 0.76, y: 0.32),
+                startRadius: 18,
+                endRadius: 360
+            )
 
-                RadialGradient(
-                    colors: [Color.moniSky.opacity(0.22), .clear],
-                    center: UnitPoint(x: 0.86 - x * 0.16, y: 0.24 + y * 0.16),
-                    startRadius: 18,
-                    endRadius: 360
-                )
-
-                RadialGradient(
-                    colors: [Color.moniLime.opacity(0.28), .clear],
-                    center: UnitPoint(x: 0.30 + x * 0.18, y: 0.92),
-                    startRadius: 8,
-                    endRadius: 320
-                )
-            }
+            RadialGradient(
+                colors: [Color.moniLime.opacity(0.24), .clear],
+                center: UnitPoint(x: 0.42, y: 0.92),
+                startRadius: 8,
+                endRadius: 320
+            )
         }
         .ignoresSafeArea()
     }
@@ -206,27 +200,22 @@ struct AnimatedBudgetBackdrop: View {
     let state: BudgetColorState
 
     var body: some View {
-        TimelineView(.animation) { timeline in
-            let t = timeline.date.timeIntervalSinceReferenceDate
-            let drift = CGFloat((sin(t * 0.35) + 1) / 2)
-
+        LinearGradient(
+            colors: colors,
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+        .overlay {
             LinearGradient(
-                colors: colors,
-                startPoint: UnitPoint(x: 0.05 + drift * 0.20, y: 0),
-                endPoint: UnitPoint(x: 0.90 - drift * 0.12, y: 1)
+                colors: [
+                    Color.white.opacity(0.18 + min(progress, 1) * 0.08),
+                    Color.clear,
+                    Color.moniInk.opacity(0.03)
+                ],
+                startPoint: .top,
+                endPoint: .bottomTrailing
             )
-            .overlay {
-                LinearGradient(
-                    colors: [
-                        Color.white.opacity(0.18 + min(progress, 1) * 0.08),
-                        Color.clear,
-                        Color.moniInk.opacity(0.03)
-                    ],
-                    startPoint: UnitPoint(x: drift, y: 0),
-                    endPoint: UnitPoint(x: 1 - drift, y: 1)
-                )
-                .blendMode(.overlay)
-            }
+            .blendMode(.overlay)
         }
     }
 

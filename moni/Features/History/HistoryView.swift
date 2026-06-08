@@ -22,7 +22,7 @@ extension ContentView {
                                 iconName: "clock"
                             )
                         } else {
-                            VStack(spacing: 10) {
+                            LazyVStack(spacing: 10) {
                                 ForEach(transactions) { transaction in
                                     Button {
                                         withAnimation(Motion.snappy) {

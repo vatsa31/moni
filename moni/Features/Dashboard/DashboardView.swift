@@ -78,18 +78,18 @@ extension ContentView {
                         }
                     }
 
-                    SectionPanel(title: "Recent transactions", iconName: "sparkles") {
-                        let recentTransactions = transactions.prefix(8)
+                    SectionPanel(title: "Today’s transactions", iconName: "sparkles") {
+                        let todaysTransactions = transactions.filter { Calendar.current.isDateInToday($0.date) }
 
-                        if recentTransactions.isEmpty {
+                        if todaysTransactions.isEmpty {
                             EmptyStatePanel(
-                                title: "No movement yet",
-                                subtitle: "Tap the center plus to create the first expense.",
+                                title: "No movement today",
+                                subtitle: "Tap the center plus to create today’s first expense.",
                                 iconName: "tray"
                             )
                         } else {
                             VStack(spacing: 10) {
-                                ForEach(Array(recentTransactions.enumerated()), id: \.offset) { index, transaction in
+                                ForEach(Array(todaysTransactions.enumerated()), id: \.offset) { index, transaction in
                                     Button {
                                         withAnimation(Motion.snappy) {
                                             activeSheet = .transaction(type: transaction.type, transaction: transaction)

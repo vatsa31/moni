@@ -40,7 +40,7 @@ struct FirstAccountSetupView: View {
 
                     PaynoInputField(
                         title: "Opening balance",
-                        placeholder: "0",
+                        placeholder: "Opening balance",
                         text: $openingBalance,
                         keyboardType: .decimalPad
                     )
@@ -50,7 +50,7 @@ struct FirstAccountSetupView: View {
             SectionPanel(title: "Monthly budget", iconName: "chart.pie") {
                 PaynoInputField(
                     title: "Total budget",
-                    placeholder: "0",
+                    placeholder: "Monthly budget",
                     text: $monthlyBudget,
                     keyboardType: .decimalPad
                 )
