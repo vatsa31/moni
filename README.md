@@ -10,8 +10,6 @@
 
 ### Demo / Screenshots
 
-> Add screenshots or a 10s screen recording here for portfolio reviewers.
-
 | Dashboard (Budget Hero) | Quick Expense (Scrubber → Radial) | Shortcuts Snippet | Theme Builder |
 |---|---|---|---|
 | Budget progress + state colors, today's transactions | Upward drag → scrub amount ladder → drop on category | Siri / Back Tap category picker | Custom hex palette |
@@ -119,17 +117,17 @@ xcodebuild test -project moni.xcodeproj -scheme moni -destination 'platform=iOS 
 
 ---
 
-### Shortcuts Automation Setup (optional but key for demo)
+### Shortcuts Automation Setup
 
 1.  **Back Tap:** Settings > Accessibility > Touch > Back Tap > Assign Shortcut > `Quick Expense` (AddBackTapExpenseIntent). Double-tap back of phone, enter amount, pick category in snippet.
 2.  **Siri:** `“Add debit in moni 250”` / `“Add credit in moni 1000”` (no confirmation, `openAppWhenRun=false`).
 3.  **SMS Import:** Shortcuts app > Automation > Message > When message from `[BANK]` contains `debited` > Run `Import Transaction from SMS` with `Message Text = Shortcut Input`, toggle `Review Expense Category`. Handles HDFC, ICICI, SBI, Axis formats etc. via regex.
 
-> iOS does not allow direct SMS reading — the Shortcuts automation is the App Store-safe workaround.
+> iOS does not allow direct SMS reading — the Shortcuts automation is the workaround using the Shortcuts system.
 
 ---
 
-### Project Structure (file count)
+### Project Structure
 
 ~26 Swift files. Key paths:
 - `moni/Models/FinanceModels.swift` — schema
@@ -141,17 +139,7 @@ xcodebuild test -project moni.xcodeproj -scheme moni -destination 'platform=iOS 
 
 ---
 
-### What Makes It Portfolio-Worthy
-
-- **Modern native iOS** — SwiftData over CoreData, AppIntents over SiriKit, Swift Testing, iOS 18 target.
-- **Interaction engineering** — Non-linear scrubber + radial picker + haptic throttling + spring choreography vs. basic form.
-- **Precision finance** — `Int` paise storage, `Decimal` conversion, correct transfer/credit-card debt accounting, test-covered.
-- **System integration without backend** — Voice, Back Tap, SMS automation all work offline, privacy-first (no network, no bank API, no permissions prompt).
-- **Design system** — Token-driven theming with JSON persistence, `Color(hex:)` 3/6/8-digit support, motion system.
-
----
-
-### Roadmap / Ideas
+### Roadmap
 
 - [ ] Swift Charts for spend trends
 - [ ] CSV export / import
@@ -165,9 +153,3 @@ xcodebuild test -project moni.xcodeproj -scheme moni -destination 'platform=iOS 
 ### License
 
 MIT — do what you want, attribution appreciated.
-
----
-
-**For portfolio side-projects list:**
-
-> **moni — Offline Expense Tracker (iOS 18, SwiftUI + SwiftData)** — Fast, private finance with gesture-driven expense entry (drag-scrub + radial picker), monthly/category budgets, and Siri/Shortcuts/SMS automations. No backend, all data on device, amounts stored as paise. Features regex bank-SMS parser and custom hex-theming engine.
