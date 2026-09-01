@@ -8,6 +8,9 @@
 import Foundation
 import SwiftData
 
+// MARK: - Account Type
+
+/// Supported account kinds.
 enum AccountType: String, CaseIterable, Codable, Identifiable {
     case cash
     case bank
@@ -38,6 +41,8 @@ enum AccountType: String, CaseIterable, Codable, Identifiable {
     }
 }
 
+// MARK: - Transaction Type
+
 enum TransactionType: String, CaseIterable, Codable, Identifiable {
     case expense
     case income
@@ -57,6 +62,8 @@ enum TransactionType: String, CaseIterable, Codable, Identifiable {
     }
 }
 
+// MARK: - Budget State
+
 enum BudgetColorState: Equatable {
     case neutral
     case green
@@ -64,6 +71,9 @@ enum BudgetColorState: Equatable {
     case red
 }
 
+// MARK: - SwiftData Models
+
+/// SwiftData model for a financial account.
 @Model
 final class Account {
     var name: String
@@ -157,6 +167,8 @@ final class MonthlyBudget {
         self.category = category
     }
 }
+
+// MARK: - Calendar Helpers
 
 extension Calendar {
     func startOfMonth(for date: Date) -> Date {

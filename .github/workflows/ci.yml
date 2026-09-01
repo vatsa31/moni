@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode 16.4
+        run: sudo xcode-select -s /Applications/Xcode_16.4.app || sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Install SwiftLint (if not cached)
+        run: |
+          if ! command -v swiftlint &> /dev/null; then
+            brew install swiftlint
+          fi
+          swiftlint version
+
+      - name: Lint
+        run: swiftlint --strict
+
+      - name: Build
+        run: |
+          xcodebuild build \
+            -project moni.xcodeproj \
+            -scheme moni \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' \
+            -skipPackagePluginValidation \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Test
+        run: |
+          xcodebuild test \
+            -project moni.xcodeproj \
+            -scheme moni \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' \
+            CODE_SIGNING_ALLOWED=NO

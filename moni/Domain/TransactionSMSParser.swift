@@ -5,6 +5,9 @@
 
 import Foundation
 
+// MARK: - Model
+
+/// Result of parsing a bank SMS.
 struct ParsedSMSTransaction {
     let amountPaise: Int
     let type: TransactionType
@@ -13,7 +16,11 @@ struct ParsedSMSTransaction {
     let sourceText: String
 }
 
+// MARK: - Parser
+
+/// Regex-based parser for Indian bank SMS messages.
 enum TransactionSMSParser {
+    /// Parses raw SMS text into an amount, type, payee and inferred category.
     static func parse(_ text: String) -> ParsedSMSTransaction? {
         let cleanedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let amountPaise = parseAmountPaise(from: cleanedText),
@@ -159,6 +166,8 @@ enum TransactionSMSParser {
             keywords.contains(where: searchable.contains)
         }?.0
     }
+
+    // MARK: - Private Helpers
 
     private static func firstMatch(pattern: String, in text: String) -> NSTextCheckingResult? {
         guard let regex = try? NSRegularExpression(pattern: pattern) else {

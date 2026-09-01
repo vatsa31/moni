@@ -1,0 +1,43 @@
+# SwiftLint — https://realm.github.io/SwiftLint
+disabled_rules:
+  - trailing_whitespace  # handled by SwiftFormat
+
+opt_in_rules:
+  - empty_count
+  - empty_string
+  - explicit_self
+  - force_unwrapping
+  - redundant_nil_coalescing
+  - discouraged_object_literal
+  - missing_docs
+
+identifier_name:
+  min_length: 2
+  max_length: 40
+  excluded:
+    - id
+    - x
+    - y
+
+line_length:
+  warning: 120
+  error: 150
+  ignores_urls: true
+  ignores_function_declarations: true
+
+type_body_length:
+  warning: 350
+  error: 500
+
+file_length:
+  warning: 450
+  error: 700
+
+cyclomatic_complexity:
+  warning: 12
+  error: 20
+
+excluded:
+  - .derivedData
+  - DerivedData
+  - .build

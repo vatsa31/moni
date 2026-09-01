@@ -7,6 +7,7 @@
 
 import Foundation
 
+/// Helpers for precise INR <-> paise conversions and display.
 enum MoneyFormatting {
     static let rupees: FloatingPointFormatStyle<Double>.Currency = .currency(code: "INR")
         .precision(.fractionLength(0...2))

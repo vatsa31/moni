@@ -19,3 +19,5 @@ Build/
 *.xcuserstate
 xcuserdata/
 *.xcuserdatad/
+# Keep shared schemes
+!xcshareddata/
