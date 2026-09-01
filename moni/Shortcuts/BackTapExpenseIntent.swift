@@ -10,14 +10,14 @@ import Foundation
 import SwiftUI
 
 struct AddBackTapExpenseIntent: AppIntent {
-    static var title: LocalizedStringResource = "Add Expense"
+    static var title: LocalizedStringResource = "Quick Expense"
     static var description = IntentDescription("Asks for an amount and shows a category picker.")
     static var openAppWhenRun = false
 
     @Parameter(
         title: "Amount",
         description: "Expense amount in rupees",
-        requestValueDialog: "How much did you spend?"
+        requestValueDialog: "What is the quick expense amount?"
     )
     var amount: Double
 
@@ -206,22 +206,24 @@ private struct ShortcutCategoryPickerSnippet: View {
 struct MoniAppShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(
-            intent: AddBackTapExpenseIntent(),
+            intent: AddVoiceDebitIntent(),
             phrases: [
-                "Add expense in \(.applicationName)",
-                "Log expense in \(.applicationName)"
+                "Add debit in \(.applicationName)",
+                "Add debit to \(.applicationName)",
+                "Log debit in \(.applicationName)"
             ],
-            shortTitle: "Add Expense",
-            systemImageName: "indianrupeesign.circle"
+            shortTitle: "Add Debit",
+            systemImageName: "arrow.up.circle"
         )
         AppShortcut(
-            intent: ImportTransactionFromSMSIntent(),
+            intent: AddVoiceCreditIntent(),
             phrases: [
-                "Import transaction in \(.applicationName)",
-                "Import SMS transaction in \(.applicationName)"
+                "Add credit in \(.applicationName)",
+                "Add credit to \(.applicationName)",
+                "Log credit in \(.applicationName)"
             ],
-            shortTitle: "Import SMS",
-            systemImageName: "message.badge"
+            shortTitle: "Add Credit",
+            systemImageName: "arrow.down.circle"
         )
     }
 }
